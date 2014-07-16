@@ -564,6 +564,9 @@ if [ "$MMTESTS_SIMULTANEOUS" != "yes" ]; then
 		numactl --hardware >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
 	fi
 	PROC_FILES="/proc/vmstat /proc/zoneinfo /proc/meminfo /proc/schedstat"
+	GCMA_DBG_PATH="/sys/kernel/debug/gcma/"
+	GCMA_FILES="${GCMA_DBG_PATH}stored_pages ${GCMA_DBG_PATH}loaded_pages"
+	GCMA_FILES+=" ${GCMA_DBG_PATH}evicted_pages"
 	for TEST in $MMTESTS; do
 		# Configure transparent hugepage support as configured
 		reset_transhuge
@@ -575,6 +578,11 @@ if [ "$MMTESTS_SIMULTANEOUS" != "yes" ]; then
 		echo test begin :: $TEST `date +%s` >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
 
 		# Record some files at start of test
+		for GCMA_FILE in $GCMA_FILES; do
+			echo file start :: $GCMA_FILE >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
+			sudo cat $GCMA_FILE >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
+		done
+
 		for PROC_FILE in $PROC_FILES; do
 			echo file start :: $PROC_FILE >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
 			cat $PROC_FILE >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
@@ -593,6 +601,11 @@ if [ "$MMTESTS_SIMULTANEOUS" != "yes" ]; then
 		EXIT_CODE=$?
 
 		# Record some basic information at end of test
+		for GCMA_FILE in $GCMA_FILES; do
+			echo file end :: $GCMA_FILE >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
+			sudo cat $GCMA_FILE >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
+		done
+
 		for PROC_FILE in $PROC_FILES; do
 			echo file end :: $PROC_FILE >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME
 			cat $PROC_FILE >> $SHELLPACK_LOG/tests-timestamp-$RUNNAME

@@ -21,6 +21,9 @@ my $new_compaction_stats = 0;
 my $autonuma_enabled = 1;
 
 my %_fieldNameMap = (
+	"gcma_stored_pages"		=> "GCMA Stored Pages",
+	"gcma_loaded_pages"		=> "GCMA Loaded Pages",
+	"gcma_evicted_pages"		=> "GCMA Evicted Pages",
 	"mmtests_minor_faults"		=> "Minor Faults",
 	"pgmajfault"			=> "Major Faults",
 	"pgpgin"			=> "Sector Reads",
@@ -107,6 +110,9 @@ my @_autonuma_stats = (
 
 my @_fieldOrder = (
 	"blank",
+	"gcma_stored_pages",
+	"gcma_loaded_pages",
+	"gcma_evicted_pages",
 	"mmtests_minor_faults",
 	"pgmajfault",
         "pswpin",
@@ -179,6 +185,9 @@ sub extractReport($$$$) {
 	my ($self, $reportDir, $testName, $testBenchmark, $subHeading, $rowOrientated) = @_;
 	my (%vmstat_before, %vmstat_after, %vmstat);
 	my ($reading_test, $reading_before, $reading_after);
+	my ($reading_gcma_stored_before, $reading_gcma_stored_after);
+	my ($reading_gcma_loaded_before, $reading_gcma_loaded_after);
+	my ($reading_gcma_evicted_before, $reading_gcma_evicted_after);
 	my $elapsed_time;
 	my %zones_seen;
 
@@ -197,6 +206,19 @@ sub extractReport($$$$) {
 		}
 
 		if ($reading_test) {
+			if ($_ =~ /^file start :: \/sys\/kernel\/debug\/gcma\/stored_pages/) {
+				$reading_gcma_stored_before = 1;
+				next;
+			}
+			if ($_ =~ /^file start :: \/sys\/kernel\/debug\/gcma\/loaded_pages/) {
+				$reading_gcma_loaded_before = 1;
+				next;
+			}
+			if ($_ =~ /^file start :: \/sys\/kernel\/debug\/gcma\/evicted_pages/) {
+				$reading_gcma_evicted_before = 1;
+				next;
+			}
+
 			if ($_ =~ /^file start :: \/proc\/vmstat/) {
 				$reading_before = 1;
 				next;
@@ -204,6 +226,19 @@ sub extractReport($$$$) {
 
 			if ($_ =~ /^file start :: \/proc\/zoneinfo/) {
 				$reading_before = 0;
+				next;
+			}
+
+			if ($_ =~ /^file end :: \/sys\/kernel\/debug\/gcma\/stored_pages/) {
+				$reading_gcma_stored_after = 1;
+				next;
+			}
+			if ($_ =~ /^file end :: \/sys\/kernel\/debug\/gcma\/loaded_pages/) {
+				$reading_gcma_loaded_after = 1;
+				next;
+			}
+			if ($_ =~ /^file end :: \/sys\/kernel\/debug\/gcma\/evicted_pages/) {
+				$reading_gcma_evicted_after = 1;
 				next;
 			}
 
@@ -219,6 +254,36 @@ sub extractReport($$$$) {
 
 			if ($_ =~ /^test end :: $testBenchmark/) {
 				$reading_test = 0;
+				next;
+			}
+
+			if ($reading_gcma_stored_before) {
+				$vmstat_before{"gcma_stored_pages"} = $_;
+				$reading_gcma_stored_before = 0;
+				next;
+			} elsif ($reading_gcma_stored_after) {
+				$vmstat_after{"gcma_stored_pages"} = $_;
+				$reading_gcma_stored_after = 0;
+				next;
+			}
+
+			if ($reading_gcma_loaded_before) {
+				$vmstat_before{"gcma_loaded_pages"} = $_;
+				$reading_gcma_loaded_before = 0;
+				next;
+			} elsif ($reading_gcma_loaded_after) {
+				$vmstat_after{"gcma_loaded_pages"} = $_;
+				$reading_gcma_loaded_after = 0;
+				next;
+			}
+
+			if ($reading_gcma_evicted_before) {
+				$vmstat_before{"gcma_evicted_pages"} = $_;
+				$reading_gcma_evicted_before = 0;
+				next;
+			} elsif ($reading_gcma_evicted_after) {
+				$vmstat_after{"gcma_evicted_pages"} = $_;
+				$reading_gcma_evicted_after = 0;
 				next;
 			}
 
@@ -322,7 +387,8 @@ sub extractReport($$$$) {
 	}
 
 	# Flat values
-	foreach my $key ("pgpgin", "pgpgout", "pswpin", "pswpout",
+	foreach my $key ("gcma_stored_pages", "gcma_loaded_pages", "gcma_evicted_pages",
+			 "pgpgin", "pgpgout", "pswpin", "pswpout",
 			 "pgfault", "pgmajfault", "allocstall",
 			 "pgalloc_dma", "pgalloc_dma32", "pgalloc_normal", "pgalloc_movable",
 			 "kswapd_inodesteal", "pginodesteal", "slabs_scanned",
