@@ -24,6 +24,8 @@ my %_fieldNameMap = (
 	"gcma_stored_pages"		=> "GCMA Stored Pages",
 	"gcma_loaded_pages"		=> "GCMA Loaded Pages",
 	"gcma_evicted_pages"		=> "GCMA Evicted Pages",
+	"alloc_cma"			=> "CMA Allocations",
+	"success_alloc_cma"		=> "CMA Successes",
 	"mmtests_minor_faults"		=> "Minor Faults",
 	"pgmajfault"			=> "Major Faults",
 	"pgpgin"			=> "Sector Reads",
@@ -113,6 +115,8 @@ my @_fieldOrder = (
 	"gcma_stored_pages",
 	"gcma_loaded_pages",
 	"gcma_evicted_pages",
+	"alloc_cma",
+	"success_alloc_cma",
 	"mmtests_minor_faults",
 	"pgmajfault",
         "pswpin",
@@ -388,6 +392,7 @@ sub extractReport($$$$) {
 
 	# Flat values
 	foreach my $key ("gcma_stored_pages", "gcma_loaded_pages", "gcma_evicted_pages",
+			 "alloc_cma", "success_alloc_cma",
 			 "pgpgin", "pgpgout", "pswpin", "pswpout",
 			 "pgfault", "pgmajfault", "allocstall",
 			 "pgalloc_dma", "pgalloc_dma32", "pgalloc_normal", "pgalloc_movable",
