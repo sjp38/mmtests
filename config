@@ -4,8 +4,7 @@ DIRNAME=`dirname $0`
 SCRIPTDIR=`cd "$DIRNAME" && pwd`
 
 # MM Test Parameters
-#export MMTESTS="aim9"
-export MMTESTS="kernbench multibuild reaim postmark aim9 vmr-stream iozone fsmark-single hackbench-pipes sysbench micro lmbench stress-blktrace stress-highalloc"
+export MMTESTS="kernbench multibuild postmark aim9 vmr-stream iozone fsmark-single hackbench-pipes lmbench stress-highalloc"
 export SKIP_WARMUP=yes
 
 # Profiling parameters
@@ -140,7 +139,9 @@ export LARGECOPY_THREADS=1
 # LMBench
 export LMBENCH_TESTS=lat_mmap
 export LMBENCH_ITERATIONS=500
-export LMBENCH_LATMMAP_FILESIZE=$((256*1048576))
+export LMBENCH_LATMMAP_MIN_FILESIZE=$((64*1024))
+export LMBENCH_LATMMAP_MAX_FILESIZE=$((2048*1048576))
+export LMBENCH_LATMMAP_ITERATIONS=60
 
 # LTP
 export LTP_RUN_TESTS="controllers"
@@ -256,6 +257,8 @@ else
 	export OLTP_SHAREDBUFFERS=$(($MEMTOTAL_BYTES/4))
 fi
 export OLTP_CACHESIZE=$(($MEMTOTAL_BYTES*6/10))
+export SYSBENCH_DRIVER=postgres
+export SYSBENCH_MAX_THREADS=$((NUMCPUS*4))
 #export OLTP_PAGESIZES="base huge dynhuge"
 #export OLTP_MAX_THREADS="--max-threads N"
 #
