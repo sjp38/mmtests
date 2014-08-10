@@ -67,12 +67,24 @@ sub extractSummary() {
 	my $column = 1;
 
 	if ($subHeading eq "LoadTime") {
-		$self->{_FieldFormat} = [ "%-${fieldLength}d", "%${fieldLength}d", "%$fieldLength.2f" ];
-		$self->{_FieldHeaders} = [ "Action", "Time" ];
-		$self->{_SummaryHeaders} = [ "Action", "Time" ];
+		my @data = @{$self->{_LoadTimeData}};
 
-		push @{$self->{_SummaryData}}, [ "DBLoadTime", $self->{_LoadTime} ];
-		push @{$self->{_SummaryData}}, [ "DBWarmupTime", $self->{_WarmupTime} ];
+		$self->{_FieldFormat} = [ "%-${fieldLength}d", "%${fieldLength}d", "%$fieldLength.2f" ];
+		$self->{_FieldHeaders} = [ "Client", "Time" ];
+		$self->{_SummaryHeaders} = [ "Client", "Min", "Mean", "TrimMean", "Stddev", "Max" ];
+		$self->{_FieldFormat} = [ "%-${fieldLength}d", "%${fieldLength}d", "%$fieldLength.2f" ];
+
+		my @units;
+		my @row;
+		foreach my $row (@{$data[0]}) {
+			push @units, @{$row}[1];
+		}
+		push @row, 1;
+		foreach my $funcName ("calc_min", "calc_mean", "calc_5trimmed_mean", "calc_stddev", "calc_max") {
+			no strict "refs";
+			push @row, &$funcName(@units);
+		}
+		push @{$self->{_SummaryData}}, \@row;
 		return 1;
 	}
 
@@ -133,32 +145,24 @@ sub printReport() {
 sub extractReport($$$) {
 	my ($self, $reportDir, $reportName) = @_;
 	my ($tm, $tput, $latency);
+	my @clients = @{$self->{_Clients}};
+	my $iteration;
 
-	# Extract load time if available
-	$self->{_LoadTime} = -1;
-	if (open(INPUT, "$reportDir/noprofile/default/load.time")) {
-		while (<INPUT>) {
-			next if $_ !~ /elapsed/;
-			$self->{_LoadTime} =  $self->_time_to_elapsed($_);
+	# Extract load times if available
+	$iteration = 0;
+	foreach my $client (@clients) {
+		if (open (INPUT, "$reportDir/noprofile/default/load-$client.time")) {
+			while (<INPUT>) {
+				next if $_ !~ /elapsed/;
+				push @{$self->{_LoadTimeData}[0]}, [ $iteration, $self->_time_to_elapsed($_) ];
+			}
+			close INPUT;
 		}
-		close INPUT;
 	}
-
-	# Extract warmup time if available
-	$self->{_WarmupTime} = -1;
-	if (open(INPUT, "$reportDir/noprofile/default/warmup.time")) {
-		while (<INPUT>) {
-			next if $_ !~ /elapsed/;
-			$self->{_WarmupTime} =  $self->_time_to_elapsed($_);
-		}
-		close INPUT;
-	}
-
 
 	# Extract per-client transaction information
-	my @clients = @{$self->{_Clients}};
 	foreach my $client (@clients) {
-		my $iteration = 0;
+		$iteration = 0;
 
 		my @files = <$reportDir/noprofile/default/pgbench-raw-$client-*>;
 		foreach my $file (@files) {
